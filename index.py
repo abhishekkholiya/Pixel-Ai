@@ -21,7 +21,7 @@ intents.members = True
 
 
 #stability-api part
-api_key ='sk-dSqynjKMho8UFL5f6P53F9gBgzEaDY2qek4XZMusHovjEpNh'
+api_key ='sk-DzDbIo0XtYi5rczfPAVn14pumyiiQhZczIwT6At4Gj09vsV7'
 stability_api = client.StabilityInference(
     key=api_key,
     verbose=True
@@ -29,7 +29,7 @@ stability_api = client.StabilityInference(
 
 def animate(arg1,arg2):
     STABILITY_HOST = "grpc.stability.ai:443"
-    STABILITY_KEY = "sk-dSqynjKMho8UFL5f6P53F9gBgzEaDY2qek4XZMusHovjEpNh"
+    STABILITY_KEY = "sk-DzDbIo0XtYi5rczfPAVn14pumyiiQhZczIwT6At4Gj09vsV7"
 
     context = api.Context(STABILITY_HOST,STABILITY_KEY)
     print(arg1,arg2)
@@ -70,11 +70,7 @@ bot = commands.Bot(command_prefix=">",intents= intents)
 
 #here starts the discord bot part
 
-@bot.event
-async def on_ready():
-    print('Bot is ready')
-    await bot.tree.sync()
-    print("commands synced")
+
 
 
 
@@ -82,6 +78,12 @@ async def on_ready():
 async def hello(interaction:discord.Interaction):
     print("reached here")
     await interaction.response.send_message(f"Hey {interaction.user.mention}, do you like the slash command?")
+    
+@bot.tree.command(name="creator",description="Bot responds with creator name")
+async def creator(interaction:discord.Interaction):
+    print("reached here")
+    await interaction.response.send_message(f"Hey {interaction.user.mention}, I am created by mrkholiya#5152 and I am still learning about this beautiful world!")
+
 
 @bot.tree.command(name="wave",description="Bot responds with wave")
 @app_commands.describe(wave_at = "whom to wave?")
@@ -89,30 +91,12 @@ async def wave(interaction:discord.Interaction,wave_at:str):
     print(wave_at)
     await interaction.response.send_message(f"{interaction.user.name} waved at {wave_at} ")
 
-@bot.command()
-async def make(ctx, *, prompt):
-    message = await ctx.send(f"Generating ✨ results for ({prompt})")
-    result = stability_api.generate(prompt=prompt)
-    for resp in result:
-        for artifact in resp.artifacts:
-            if artifact.finish_reason == generation.FILTER:
-                message = await ctx.send("The prompt you gave is against our policies")
-            if artifact.type == generation.ARTIFACT_IMAGE:
-                img = Image.open(io.BytesIO(artifact.binary))
-                arr = io.BytesIO(artifact.binary)
-                img.save(arr,format="PNG")
-                arr.seek(0)
-                file = discord.File(arr,filename="result.png")
-                await message.edit(content=f"Showing Results ✨ for {prompt}")
-                await ctx.send(file=file)
-
-@bot.tree.command(name="image",description="Bot makes image of your wish")
-@app_commands.describe(make="what to make?")
-async def image(interaction:discord.Interaction,make:str):
-    print(discord.Interaction)
+#new command starts here
+@bot.tree.command(name="imagine",description="Bot makes image of your wish")
+@app_commands.describe(make="prompt")
+async def imagine(interaction:discord.Interaction,make:str):
     message = await interaction.response.send_message(f"Generating ✨ results for ({make})")
     result = stability_api.generate(prompt=make)
-    print(result)
     for resp in result:
         for artifact in resp.artifacts:
             if artifact.finish_reason == generation.FILTER:
@@ -124,21 +108,87 @@ async def image(interaction:discord.Interaction,make:str):
                 img.save(arr,format="PNG")
                 arr.seek(0)
                 file = discord.File(arr,filename="result.png")
-                await interaction.delete_original_response()
+               
                 embed = discord.Embed(title =f"Generated ✨ Results for ({make})")
                 embed.set_image(url="attachment://result.png")
                 embed.set_author(name=interaction.user.name)
-                await interaction.channel.send(embed=embed,file=file)
+                msg = await interaction.original_response()
+               # await msg.edit(embed=embed)
+                await interaction.channel.send(file=file)
 
+@bot.tree.command(name="multiple",description="Bot generates multiple images for same prompt")
+@app_commands.describe(make="prompt")
+async def multiple(interaction:discord.Interaction,make:str):
+    message = await interaction.response.send_message(f"Generating ✨ multiple results for ({make})")
+    result = stability_api.generate(prompt=make)
+    for resp in result:
+        for artifact in resp.artifacts:
+            if artifact.finish_reason == generation.FILTER:
+                await interaction.delete_original_response()
+                message = await interaction.channel.send    ("The prompt you gave is against our policies")
+            if artifact.type == generation.ARTIFACT_IMAGE:
+                img = Image.open(io.BytesIO(artifact.binary))
+                arr = io.BytesIO(artifact.binary)
+                img.save(arr,format="PNG")
+                arr.seek(0)
+                
+                answers = stability_api.generate(
+                    prompt=f"{make}",
+                    #init_image=img, 
+                    #start_schedule=0.01, # Set the strength of our prompt in relation to our initial image.
+                    steps=50, 
+                    cfg_scale=8.0, 
+                    width=1024, 
+                    height=1024, 
+                    samples=3, 
+                    sampler=generation.SAMPLER_K_DPMPP_2M 
+                )
+                for resp in answers:
+                    for artifact in resp.artifacts:
+                        if artifact.finish_reason == generation.FILTER:
+                            warnings.warn(
+                                "Your request activated the API's safety filters and could not be processed."
+                                "Please modify the prompt and try again.")
+                        if artifact.type == generation.ARTIFACT_IMAGE:
+                            global img2
+                            img2 = Image.open(io.BytesIO(artifact.binary)) # Set our resulting initial image generations as 'img2' to avoid overwriting our previous 'img' generation.
+                            img2.save(str(artifact.seed)+ ".png") # Save our generated images with their seed number as the filename.
+                            
+                            img2 = Image.open(io.BytesIO(artifact.binary))
+                            arr = io.BytesIO(artifact.binary)
+                            img2.save(arr,format="PNG")
+                            arr.seek(0)
+                            file = discord.File(arr,filename="result.png")
+                            
+                            
+                       
+                            
+                            embed = discord.Embed(title =f"Generated ✨ Results for ({make})")
+                            embed.set_image(url="attachment://result.png")
+                            embed.set_author(name=interaction.user.name)
+                            msg = await interaction.original_response()
+                        # await msg.edit(embed=embed)
+                            await interaction.channel.send(file=file)
 
-@bot.tree.command(name="video",description="Bot makes video of your wish")
-@app_commands.describe(character="choose first character",character2="choose second character")
-async def video(interaction:discord.Interaction,character:str,character2:str):  
-    try: 
-        await interaction.response.send_message(content=f"Generating Video ✨ for ({character}) and ({character2})")
-        thread = threading.Thread(target=animate,args=(character,character2))
-        thread.start()
-    except:
-        await interaction.response.send_message(content="You have just tried the command!")
+                            
+
    
-bot.run('ODY0MDUzNDQ2MDM3OTk1NTUw.YOv2eg.voA9GlXhxYgXubktKHdDUID5Ztw')
+#@bot.tree.command(name="video",description="Bot makes video of your wish")
+#@app_commands.describe(character="choose first character",character2="choose second character")
+#async def video(interaction:discord.Interaction,character:str,character2:str):  
+ #   try: 
+ #       await interaction.response.send_message(content=f"Generating Video ✨ for ({character}) and ({character2})")
+  #      thread = threading.Thread(target=animate,args=(character,character2))
+   #     thread.start()
+   # except:
+    #    await interaction.response.send_message(content="You have just tried the command!")
+
+
+@bot.event
+async def on_ready():
+    print('Bot is ready')
+    await bot.tree.sync()
+    print("commands synced")
+    
+   
+bot.run("ODEwMTUwNzAxNDQ2NDYzNTIw.GBheMP.tonvA78YNw5LiSt1OX_-2Kn8xtRPyFKMsaZB1w")
