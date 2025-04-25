@@ -1,7 +1,9 @@
 import discord 
+from dotenv import load_dotenv
 from discord import app_commands
 from discord.ext import commands
 import threading
+import os
 
 
 from fileinput import filename
@@ -14,24 +16,26 @@ from stability_sdk.utils import create_video_from_frames
 from tqdm import tqdm
 
 
+load_dotenv()
 #intents required
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
+bot_token = os.getenv("BOT_TOKEN")
 
 #stability-api part
-api_key ='sk-DzDbIo0XtYi5rczfPAVn14pumyiiQhZczIwT6At4Gj09vsV7'
+api_key = os.getenv('STABILITY_API_KEY')
+
 stability_api = client.StabilityInference(
     key=api_key,
     verbose=True
 )
 
 def animate(arg1,arg2):
-    STABILITY_HOST = "grpc.stability.ai:443"
-    STABILITY_KEY = "sk-DzDbIo0XtYi5rczfPAVn14pumyiiQhZczIwT6At4Gj09vsV7"
+    STABILITY_HOST = os.getenv('API_HOST')
 
-    context = api.Context(STABILITY_HOST,STABILITY_KEY)
+    context = api.Context(STABILITY_HOST,api_key)
     print(arg1,arg2)
     args = AnimationArgs()
     args.interpolate_prompts= True
@@ -191,4 +195,5 @@ async def on_ready():
     print("commands synced")
     
    
-bot.run("ODEwMTUwNzAxNDQ2NDYzNTIw.GBheMP.tonvA78YNw5LiSt1OX_-2Kn8xtRPyFKMsaZB1w")
+# bot.run("ODg2MjYzMDAwNTQ0MTg2NDg5.G5ESzv.AvgGeWEKhRBD5g7v9mV2WJ77CdNfPAIrY7CrG4")
+bot.run(bot_token)

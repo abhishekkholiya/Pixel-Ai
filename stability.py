@@ -1,10 +1,14 @@
+from dotenv import load_dotenv
 from stability_sdk.animation import AnimationArgs, Animator
 from stability_sdk import api
 from stability_sdk.utils import create_video_from_frames
 from tqdm import tqdm
+import os
 
-STABILITY_HOST = "grpc.stability.ai:443"
-STABILITY_KEY = "sk-dSqynjKMho8UFL5f6P53F9gBgzEaDY2qek4XZMusHovjEpNh"
+STABILITY_HOST = os.getenv('STABILITY_API_KEY')
+STABILITY_KEY = os.getenv('API_KEY')
+
+load_dotenv()
 
 context = api.Context(STABILITY_HOST,STABILITY_KEY)
 
